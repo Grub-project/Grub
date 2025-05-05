@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Recipe Suggestions - Grub</title>
+  <link rel="stylesheet" href="recipes.css">
+</head>
+<body>
+  <header>
+    <h1>AI Meal Prep Recipe Suggestions</h1>
+    <nav>
+      <ul>
+       <li><a href="dashboard.html">Dashboard</a></li>
+        <li><a href="preferences.html">Preferences</a></li>
+        <li><a href="recipes.html">Recipe Suggestions</a></li>
+        <li><a href="grocery.html">Grocery List</a></li>
+        <li><a href="login.html">Logout</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main>
+    <section id="search-section">
+      <input type="text" id="recipe-query" placeholder="Enter a meal prep idea (e.g., low-carb dinners)" />
+      <button id="search-btn">Generate Recipes</button>
+    </section>
+
+    <section id="results-section">
+      <div id="recipe-results"></div>
+    </section>
+  </main>
+<script src="recipe.js"></script>
+</body>
+</html>

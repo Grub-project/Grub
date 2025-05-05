@@ -1,0 +1,105 @@
+/* Base page styles */
+body {
+  margin: 0;
+  font-family: 'Helvetica Neue', sans-serif;
+  background-color: #f7fdf9;
+  color: #333;
+}
+
+/* Header */
+.main-header {
+  background-color: white;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1em 2em;
+}
+.main-header .logo {
+  font-size: 1.8em;
+  font-weight: bold;
+  color: #2e7d32;
+}
+nav ul {
+  list-style: none;
+  display: flex;
+  gap: 1em;
+  margin: 0;
+  padding: 0;
+}
+nav ul li a {
+  text-decoration: none;
+  color: #2e7d32;
+  font-weight: bold;
+}
+.signup-btn {
+  background-color: #2e7d32;
+  color: white;
+  padding: 0.5em 1em;
+  border-radius: 5px;
+}
+
+/* Hero Section */
+.hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  padding: 2em;
+  background-color: #e9f7ef;
+}
+.hero-text {
+  flex: 1 1 300px;
+  padding: 1em;
+}
+.hero-text h1 {
+  font-size: 2.5em;
+  margin-bottom: 0.5em;
+  color: #1b5e20;
+}
+.hero-text p {
+  font-size: 1.2em;
+  margin-bottom: 1em;
+}
+.cta-btn {
+  background-color: #4caf50;
+  color: white;
+  padding: 0.75em 1.5em;
+  text-decoration: none;
+  border-radius: 8px;
+  font-weight: bold;
+}
+.hero-img {
+  flex: 1 1 300px;
+  text-align: center;
+}
+.hero-img img {
+  width: 100%;
+  max-width: 400px;
+  border-radius: 12px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+/* Recipes Preview */
+.recipes-preview {
+  text-align: center;
+  padding: 2em;
+  background-color: white;
+}
+.recipes-preview h2 {
+  color: #1b5e20;
+  font-size: 2em;
+  margin-bottom: 1em;
+}
+.meal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1em;
+  padding: 0 1em;
+}
+.meal-grid img {
+  width: 100%;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+

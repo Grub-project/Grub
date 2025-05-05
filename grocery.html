@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Grocery List – Grub</title>
+  <link rel="stylesheet" href="grocery.css" />
+</head>
+<body>
+  <header>
+    <h1>Your Grocery List</h1>
+    <nav>
+      <ul>
+        <li><a href="dashboard.html">Dashboard</a></li>
+        <li><a href="preferences.html">Preferences</a></li>
+        <li><a href="recipes.html">Recipe Suggestions</a></li>
+        <li><a href="grocery.html">Grocery List</a></li>
+        <li><a href="login.html">Logout</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main>
+    <section id="grocery-section">
+      <div class="grocery-actions">
+        <button id="generate-plan">Generate Meal Plan</button>
+        <button id="import-plan">Import Grocery List</button>
+        <button id="sort-list">Sort List</button>
+        <button id="clear-completed">Clear Completed</button>
+      </div>
+
+      <ul id="grocery-list"></ul>
+
+      <form id="add-item-form">
+        <input type="text" id="new-item" placeholder="Add item..." required />
+        <button type="submit">Add</button>
+      </form>
+    </section>
+  </main>
+
+<script src="grocery.js"></script>
+
+</body>
+</html>

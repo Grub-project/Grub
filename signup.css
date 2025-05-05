@@ -1,0 +1,103 @@
+/* Base page styles */
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f7fff8;
+  color: #333;
+  margin: 0;
+}
+
+/* Header */
+header {
+  background-color: #4caf50;
+  color: white;
+  text-align: center;
+  padding: 1.5em;
+}
+
+/* Nav */
+nav ul {
+  display: flex;
+  justify-content: center;
+  gap: 1.5em;
+  list-style: none;
+  padding: 0;
+  margin: 1em 0 0 0;
+}
+nav ul li a {
+  color: white;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+/* Form container */
+.form-container {
+  max-width: 500px;
+  margin: 2em auto;
+  background: white;
+  padding: 2em;
+  border-radius: 10px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Form layout */
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 1em;
+}
+label {
+  font-weight: bold;
+}
+input[type="email"],
+input[type="password"] {
+  padding: 0.7em;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 1em;
+}
+
+/* Submit button */
+button[type="submit"] {
+  padding: 0.7em;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-weight: bold;
+  cursor: pointer;
+}
+button[type="submit"]:hover {
+  background-color: #388e3c;
+}
+
+/* Notification banner */
+.notification {
+  margin-top: 1em;
+  padding: 0.8em 1em;
+  border-radius: 5px;
+  font-weight: bold;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+/* Show it */
+.notification.success,
+.notification.error {
+  opacity: 1;
+}
+
+/* Success state */
+.notification.success {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  border: 1px solid #a5d6a7;
+}
+
+/* Error state */
+.notification.error {
+  background-color: #ffebee;
+  color: #c62828;
+  border: 1px solid #ef9a9a;
+}
+
+
