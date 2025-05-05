@@ -24,106 +24,58 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// AI proxy endpoint 
-app.post('/api/generate', async (req, res) => {
-  const { model, prompt } = req.body;
+app.post('/auth/signup', async (req, res) => {
+  const { email, password } = req.body;
   try {
-    const aiRes = await openai.chat.completions.create({
-      model,
-      messages: [{ role: 'user', content: prompt }]
+    // 1️⃣ Create a new auth user (skips email confirmation for demo)
+    const { data: user, error: authErr } = await supabase.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true
     });
-    res.json({ content: aiRes.choices[0].message.content });
+    if (authErr) {
+      console.error('Auth signup error:', authErr);
+      return res.status(400).json({ error: authErr.message });
+    }
+
+    // 2️⃣ Insert into your own profiles table
+    const { error: profErr } = await supabase
+      .from('profiles')
+      .insert([{ id: user.id }]);
+    if (profErr) {
+      console.error('Profile insert error:', profErr);
+      // don't block signup—just log
+    }
+
+    // 3️⃣ Return the new user record (minus secrets)
+    res.json({ user: { id: user.id, email: user.email } });
   } catch (err) {
-    console.error('AI generation error:', err);
-    res.status(500).json({ error: 'AI generation failed' });
+    console.error('Signup endpoint error:', err);
+    res.status(500).json({ error: 'Internal server error during signup' });
   }
 });
 
-// Save or update preferences
-app.post('/api/preferences', async (req, res) => {
-  const { userId, diet, allergies, goalsText, calorieGoal, proteinGoal } = req.body;
-  const { error } = await supabase
-    .from('preferences')
-    .upsert({
-      user_id:       userId,
-      diet,
-      allergies,
-      goals_text:    goalsText,
-      calorie_goal:  calorieGoal,
-      protein_goal:  proteinGoal,
-      updated_at:    new Date()
-    }, { onConflict: 'user_id' });
-
-  if (error) return res.status(500).json({ error: error.message });
-  res.json({ success: true });
+app.post('/api/generate', async (req, res) => {
+  /* ... */
 });
 
-// Get user preferences
-app.get('/api/preferences/:userId', async (req, res) => {
-  const { data, error } = await supabase
-    .from('preferences')
-    .select('*')
-    .eq('user_id', req.params.userId)
-    .single();
+//
+// ─── Preferences endpoints ─────────────────────────────────────────
+app.post('/api/preferences', async (req, res) => { /* ... */ });
+app.get('/api/preferences/:userId', async (req, res) => { /* ... */ });
 
-  if (error && error.code !== 'PGRST116') {
-    return res.status(500).json({ error: error.message });
-  }
-  res.json(data || {});
-});
-
+//
 // ─── Grocery‑List endpoints ─────────────────────────────────────────
-// List items
-app.get('/api/grocery-list/:userId', async (req, res) => {
-  const { data, error } = await supabase
-    .from('grocery_items')
-    .select('*')
-    .eq('user_id', req.params.userId);
+app.get('/api/grocery-list/:userId', async (req, res) => { /* ... */ });
+app.post('/api/grocery-list', async (req, res) => { /* ... */ });
+app.delete('/api/grocery-list/:id', async (req, res) => { /* ... */ });
+app.patch('/api/grocery-list/:id', async (req, res) => { /* ... */ });
 
-  if (error) return res.status(500).json({ error: error.message });
-  res.json(data);
-});
-
-// Add item
-app.post('/api/grocery-list', async (req, res) => {
-  const { userId, item } = req.body;
-  const { data, error } = await supabase
-    .from('grocery_items')
-    .insert([{ user_id: userId, item }])
-    .single();
-
-  if (error) return res.status(500).json({ error: error.message });
-  res.json(data);
-});
-
-// Delete item
-app.delete('/api/grocery-list/:id', async (req, res) => {
-  const { error } = await supabase
-    .from('grocery_items')
-    .delete()
-    .eq('id', req.params.id);
-
-  if (error) return res.status(500).json({ error: error.message });
-  res.sendStatus(204);
-});
-
-// Toggle completion
-app.patch('/api/grocery-list/:id', async (req, res) => {
-  const { completed } = req.body;
-  const { error } = await supabase
-    .from('grocery_items')
-    .update({ completed })
-    .eq('id', req.params.id);
-
-  if (error) return res.status(500).json({ error: error.message });
-  res.sendStatus(200);
-});
-
-// ─── Serve static front‑end ────────────────────────────────────────
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 app.use(express.static(path.join(__dirname, 'public')));
 
+//
 // ─── Start server ──────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
