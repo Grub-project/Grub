@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sign Up - Grub</title>
+  <link rel="stylesheet" href="signup.css" />
+</head>
+<body>
+  <header>
+    <h1>Create Your Grub Account</h1>
+    <nav>
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="login.html">Login</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main class="form-container">
+    <form id="signup-form" method="post">
+      <label for="email">Email:</label>
+      <input type="email" id="email" name="email" required />
+
+      <label for="password">Password:</label>
+      <input type="password" id="password" name="password" required />
+
+      <label for="confirm-password">Confirm Password:</label>
+      <input type="password" id="confirm-password" name="confirm-password" required />
+
+      <button type="submit">Sign Up</button>
+    </form>
+    <p id="signup-message" class="notification"></p>
+  </main>
+
+<script type="module" src="supabaseClient.js"></script>
+<script type="module" src="signup.js"></script>
+</body>
+</html>
