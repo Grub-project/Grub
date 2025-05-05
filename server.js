@@ -9,7 +9,7 @@ import OpenAI            from 'openai';
 
 dotenv.config();
 
-const FRONTEND_ORIGIN = 'http://grub.freehostspace.com/';
+const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || '*';
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -31,27 +31,32 @@ app.use(express.json());
 app.post('/auth/signup', async (req, res) => {
   const { email, password } = req.body;
   try {
-    const { data: user, error: authErr } = await supabase.auth.admin.createUser({
+    // 1) Create the auth user
+    const { data: signData, error: signErr } = await supabase.auth.admin.createUser({
       email,
       password,
       email_confirm: true
     });
-    if (authErr) {
-      console.error('Auth signup error:', authErr);
-      return res.status(400).json({ error: authErr.message });
+    if (signErr) {
+      console.error('Auth signup error:', signErr);
+      return res.status(400).json({ error: signErr.message });
     }
 
+    const user = signData.user;
+
+    // 2) Insert matching profile row
     const { error: profErr } = await supabase
       .from('profiles')
-      .insert([{ id: user.id }]);
+      .insert([{ id: user.id, email: user.email }]);
     if (profErr) {
       console.error('Profile insert error:', profErr);
     }
 
-    return res.json({ user: { id: user.id, email: user.email } });
+    // 3) Return the new user info
+    res.json({ user: { id: user.id, email: user.email } });
   } catch (err) {
     console.error('Signup endpoint error:', err);
-    return res.status(500).json({ error: 'Internal server error during signup' });
+    res.status(500).json({ error: 'Internal server error during signup' });
   }
 });
 
@@ -102,11 +107,9 @@ app.get('/api/preferences/:userId', async (req, res) => {
   res.json(data || {});
 });
 
-// ─── Meal Plans (AI‑driven) ─────────────────────────────────────────────
 app.post('/api/meal-plans', async (req, res) => {
   const { userId } = req.body;
   try {
-    // 1) Fetch preferences
     const { data: prefs, error: pErr } = await supabase
       .from('preferences')
       .select('*')
@@ -117,12 +120,11 @@ app.post('/api/meal-plans', async (req, res) => {
       return res.status(500).json({ error: pErr.message });
     }
 
-    // 2) Ask AI for a weekly meal plan
     const prompt = `
       Generate a 7-day meal plan tailored to these preferences:
       ${JSON.stringify(prefs)}.
       Include for each day: Breakfast, Lunch, Dinner with fields name, calories, protein, carbs, fats.
-      Return JSON: { "Monday": [ {...} ], ... }.
+      Return JSON: { "Monday": [...], "Tuesday": [...], ... }.
     `;
     const aiRes = await openai.chat.completions.create({
       model: 'gpt-4',
@@ -130,7 +132,6 @@ app.post('/api/meal-plans', async (req, res) => {
     });
     const mealPlan = JSON.parse(aiRes.choices[0].message.content);
 
-    // 3) Return plan
     res.json({ mealPlan });
   } catch (err) {
     console.error('Meal plan endpoint error:', err);
