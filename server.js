@@ -1,26 +1,28 @@
 // server.js
-import express             from 'express';
-import cors                from 'cors';
-import dotenv              from 'dotenv';
-import path                from 'path';
-import { fileURLToPath }   from 'url';
-import { createClient }    from '@supabase/supabase-js';
-import OpenAI              from 'openai';
+import express           from 'express';
+import cors              from 'cors';
+import dotenv            from 'dotenv';
+import path              from 'path';
+import { fileURLToPath } from 'url';
+import { createClient }  from '@supabase/supabase-js';
+import OpenAI            from 'openai';
 
 dotenv.config();
 
+// ─── Supabase client (server‑role key) ───────────────────────────────────
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+// ─── OpenAI client ───────────────────────────────────────────────────────
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ─── AI proxy ─────────────────────────────────────────────────────────────
+// ─── AI proxy for generic prompts (used by “Suggest Targets” and elsewhere) ─
 app.post('/api/generate', async (req, res) => {
   const { model, prompt } = req.body;
   try {
@@ -35,19 +37,16 @@ app.post('/api/generate', async (req, res) => {
   }
 });
 
-// ─── Generate two 7‑day, 3‑meals/day plans ────────────────────────────────
+// ─── Generate TWO distinct 7‑day, 3‑meals/day plans ────────────────────────
 app.post('/api/meal-plans', async (req, res) => {
   const { userId } = req.body;
   try {
-    // 1) Fetch user preferences
+    // 1) Fetch preferences
     const { data: prefs, error: pErr } = await supabase
-      .from('preferences')
-      .select('*')
-      .eq('user_id', userId)
-      .single();
+      .from('preferences').select('*').eq('user_id', userId).single();
     if (pErr) throw pErr;
 
-    // 2) Build prompt
+    // 2) Build the prompt
     const prompt = `
 You are a world‑class meal‑prep chef. Based on these user preferences:
 ${JSON.stringify(prefs)}
@@ -59,39 +58,53 @@ For each meal include:
   • "calories": number
   • "protein": number
 
-Return ONLY valid JSON exactly:
+Return ONLY valid JSON in this exact shape:
 {
   "plans":[
     { "label":"Plan A", "Monday":[…], … "Sunday":[…] },
     { "label":"Plan B", /*…*/ }
   ]
 }
+No comments or trailing commas.
     `.trim();
 
-    // 3) Call OpenAI
+    // 3) Ask OpenAI
     const aiRes = await openai.chat.completions.create({
       model: 'gpt-4',
-      messages: [{ role:'user', content: prompt }]
+      messages: [{ role: 'user', content: prompt }]
     });
     const raw = aiRes.choices[0].message.content;
 
-    // 4) Extract first JSON block
+    // 4) Extract the first {…} block
     const match = raw.match(/\{[\s\S]*\}/);
     if (!match) {
-      console.error('No JSON block found in AI response:', raw);
+      console.error('No JSON found in AI response:', raw);
       throw new Error('Invalid JSON from AI');
     }
-    const { plans } = JSON.parse(match[0]);
+    let jsonText = match[0];
 
-    // 5) Return plans
+    // 5) Remove any trailing commas before ] or }
+    jsonText = jsonText.replace(/,\s*([\]}])/g, '$1');
+
+    // 6) Parse
+    let plans;
+    try {
+      ({ plans } = JSON.parse(jsonText));
+    } catch (parseErr) {
+      console.error('Failed to parse cleaned JSON:', jsonText);
+      throw new Error('Malformed JSON from AI');
+    }
+
+    // 7) Return the two plans
     res.json({ plans });
+
   } catch (err) {
     console.error('Meal-plans gen error:', err);
     res.status(500).json({ error: err.message || 'Meal plan generation failed' });
   }
 });
 
-// ─── Fetch last‑saved plan ────────────────────────────────────────────────
+// ─── Fetch the last‐saved plan ──────────────────────────────────────────────
 app.get('/api/meal-plans/:userId', async (req, res) => {
   const { userId } = req.params;
   try {
@@ -110,7 +123,7 @@ app.get('/api/meal-plans/:userId', async (req, res) => {
   }
 });
 
-// ─── Save chosen plan ─────────────────────────────────────────────────────
+// ─── Save the user’s chosen plan ───────────────────────────────────────────
 app.post('/api/meal-plans/:userId', async (req, res) => {
   const { userId } = req.params;
   const { plan }   = req.body;
@@ -126,12 +139,11 @@ app.post('/api/meal-plans/:userId', async (req, res) => {
   }
 });
 
-// ─── Serve static front‑end ───────────────────────────────────────────────
+// ─── Serve static front‑end ────────────────────────────────────────────────
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ─── Start server ─────────────────────────────────────────────────────────
+// ─── Start the server ─────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 Listening on port ${PORT}`));
-
