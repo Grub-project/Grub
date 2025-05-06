@@ -14,14 +14,13 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-// OpenAI client 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-//  AI proxy for generic prompts 
+// ─── AI proxy ─────────────────────────────────────────────────────────────
 app.post('/api/generate', async (req, res) => {
   const { model, prompt } = req.body;
   try {
@@ -36,55 +35,57 @@ app.post('/api/generate', async (req, res) => {
   }
 });
 
-//  Generate two new meal plans 
+// ─── Generate two 7‑day, 3‑meals/day plans ────────────────────────────────
 app.post('/api/meal-plans', async (req, res) => {
   const { userId } = req.body;
   try {
-    // 1) Fetch user preferences
     const { data: prefs, error: pErr } = await supabase
       .from('preferences')
       .select('*')
       .eq('user_id', userId)
       .single();
-    if (pErr) {
-      console.error('Supabase prefs fetch error:', pErr);
-      return res.status(500).json({ error: 'Failed to load preferences' });
-    }
+    if (pErr) throw pErr;
 
-    // 2) Build AI prompt
     const prompt = `
-You are a professional meal-prep chef. Based on these preferences:
+You are a world‑class meal‑prep chef. Based on these user preferences:
 ${JSON.stringify(prefs)}
 
-Produce TWO distinct 7-day meal plans, each with exactly 3 meals per day:
-Breakfast, Lunch, Dinner.  For each meal include only:
-  - "name": string
-  - "calories": number
-  - "protein": number
+Generate TWO distinct 7‑day meal plans, each with exactly 3 meals per day (Breakfast, Lunch, Dinner).
+For each meal include:
+  • "name": realistic dish name (e.g. "Grilled Lemon Herb Chicken Breast")
+  • "ingredients": array of specific items (e.g. ["skinless chicken breast","fresh rosemary","lemon zest"])
+  • "calories": number
+  • "protein": number
 
-Return JSON exactly:
-{ "plans":[ { "label":"Plan A", /*…*/ }, { "label":"Plan B", /*…*/ } ] }
+Return ONLY valid JSON exactly:
+{
+  "plans":[
+    { "label":"Plan A", "Monday":[…], … "Sunday":[…] },
+    { "label":"Plan B", /*…*/ }
+  ]
+}
     `.trim();
 
-    // 3) Request from OpenAI
     const aiRes = await openai.chat.completions.create({
       model: 'gpt-4',
-      messages: [{ role: 'user', content: prompt }]
+      messages: [{ role:'user', content: prompt }]
     });
-
-    // 4) Parse and return
-    const raw     = aiRes.choices[0].message.content;
-    const clean   = raw.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '').replace(/,\s*([\]}])/g, '$1');
+    let raw   = aiRes.choices[0].message.content;
+    // strip comments & trailing commas
+    let clean = raw
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\/\/.*$/gm, '')
+      .replace(/,\s*([\]}])/g, '$1');
     const { plans } = JSON.parse(clean);
 
     res.json({ plans });
   } catch (err) {
-    console.error('Meal-plans generation error:', err);
+    console.error('Meal-plans gen error:', err);
     res.status(500).json({ error: err.message || 'Meal plan generation failed' });
   }
 });
 
-//  Fetch the saved plan for a user 
+// ─── Fetch last‑saved plan ────────────────────────────────────────────────
 app.get('/api/meal-plans/:userId', async (req, res) => {
   const { userId } = req.params;
   try {
@@ -103,14 +104,14 @@ app.get('/api/meal-plans/:userId', async (req, res) => {
   }
 });
 
-//  Save the user’s selected plan 
+// ─── Save chosen plan ─────────────────────────────────────────────────────
 app.post('/api/meal-plans/:userId', async (req, res) => {
   const { userId } = req.params;
   const { plan }   = req.body;
   try {
     const { error } = await supabase
       .from('meal_plans')
-      .insert([{ user_id: userId, plan }]);
+      .insert([{ user_id: userId, plan, saved_at: new Date() }]);
     if (error) throw error;
     res.json({ success: true });
   } catch (err) {
@@ -119,13 +120,11 @@ app.post('/api/meal-plans/:userId', async (req, res) => {
   }
 });
 
-//  Serve static front-end 
+// ─── Serve static front‑end ───────────────────────────────────────────────
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 app.use(express.static(path.join(__dirname, 'public')));
 
-//  Start server 
+// ─── Start server ─────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 Server listening on port ${PORT}`));
-
-
+app.listen(PORT, () => console.log(`🚀 Listening on port ${PORT}`));
