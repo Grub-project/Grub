@@ -7,7 +7,13 @@ import { fileURLToPath }   from 'url';
 import { createClient }    from '@supabase/supabase-js';
 import OpenAI              from 'openai';
 
+// 1) Load environment variables
 dotenv.config();
+
+// 2) Sanity‐check logs (remove or comment out once verified)
+console.log('ENV OPENAI_API_KEY:', process.env.OPENAI_API_KEY?.slice(0, 8), '… length:', process.env.OPENAI_API_KEY?.length);
+console.log('ENV SUPABASE_URL:', process.env.SUPABASE_URL);
+console.log('ENV SUPABASE_SERVICE_ROLE_KEY present?', Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY));
 
 // ─── Supabase (server role key) ───────────────────────────────────────────
 const supabase = createClient(
@@ -28,7 +34,7 @@ app.post('/api/generate', async (req, res) => {
   try {
     const aiRes = await openai.chat.completions.create({
       model,
-      messages: [{ role:'user', content: prompt }]
+      messages: [{ role: 'user', content: prompt }]
     });
     res.json({ content: aiRes.choices[0].message.content });
   } catch (err) {
@@ -37,7 +43,7 @@ app.post('/api/generate', async (req, res) => {
   }
 });
 
-// ─── New: Generate a meal plan using saved preferences ───────────────────
+// ─── Generate a meal plan using saved preferences ───────────────────────
 app.post('/api/meal-plans', async (req, res) => {
   const { userId } = req.body;
   try {
@@ -47,7 +53,10 @@ app.post('/api/meal-plans', async (req, res) => {
       .select('*')
       .eq('user_id', userId)
       .single();
-    if (pErr) throw pErr;
+    if (pErr) {
+      console.error('Supabase prefs fetch error:', pErr);
+      return res.status(500).json({ error: 'Failed to load preferences' });
+    }
 
     // 2) Build a prompt asking for a 7‑day, 4‑meal/day plan
     const prompt = `
@@ -67,11 +76,20 @@ Reply ONLY in JSON format exactly like:
     // 3) Ask OpenAI
     const aiRes = await openai.chat.completions.create({
       model: 'gpt-4',
-      messages: [{ role:'user', content:prompt }]
+      messages: [{ role: 'user', content: prompt }]
     });
+    const rawContent = aiRes.choices[0].message.content;
 
-    // 4) Parse and return
-    const mealPlan = JSON.parse(aiRes.choices[0].message.content);
+    // 4) Parse JSON safely
+    let mealPlan;
+    try {
+      mealPlan = JSON.parse(rawContent);
+    } catch (parseErr) {
+      console.error('Failed to JSON.parse AI response:', rawContent);
+      return res.status(500).json({ error: 'Invalid JSON from AI' });
+    }
+
+    // 5) Return the meal plan
     res.json({ mealPlan });
 
   } catch (err) {
@@ -80,7 +98,7 @@ Reply ONLY in JSON format exactly like:
   }
 });
 
-// ─── Static front‑end ─────────────────────────────────────────────────────
+// ─── Serve static front‑end ───────────────────────────────────────────────
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 app.use(express.static(path.join(__dirname, 'public')));
@@ -88,3 +106,4 @@ app.use(express.static(path.join(__dirname, 'public')));
 // ─── Start server ─────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 Server listening on port ${PORT}`));
+
