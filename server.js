@@ -39,6 +39,7 @@ app.post('/api/generate', async (req, res) => {
 app.post('/api/meal-plans', async (req, res) => {
   const { userId } = req.body;
   try {
+    // 1) Fetch user preferences
     const { data: prefs, error: pErr } = await supabase
       .from('preferences')
       .select('*')
@@ -46,6 +47,7 @@ app.post('/api/meal-plans', async (req, res) => {
       .single();
     if (pErr) throw pErr;
 
+    // 2) Build prompt
     const prompt = `
 You are a world‑class meal‑prep chef. Based on these user preferences:
 ${JSON.stringify(prefs)}
@@ -66,18 +68,22 @@ Return ONLY valid JSON exactly:
 }
     `.trim();
 
+    // 3) Call OpenAI
     const aiRes = await openai.chat.completions.create({
       model: 'gpt-4',
       messages: [{ role:'user', content: prompt }]
     });
-    let raw   = aiRes.choices[0].message.content;
-    // strip comments & trailing commas
-    let clean = raw
-      .replace(/\/\*[\s\S]*?\*\//g, '')
-      .replace(/\/\/.*$/gm, '')
-      .replace(/,\s*([\]}])/g, '$1');
-    const { plans } = JSON.parse(clean);
+    const raw = aiRes.choices[0].message.content;
 
+    // 4) Extract first JSON block
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (!match) {
+      console.error('No JSON block found in AI response:', raw);
+      throw new Error('Invalid JSON from AI');
+    }
+    const { plans } = JSON.parse(match[0]);
+
+    // 5) Return plans
     res.json({ plans });
   } catch (err) {
     console.error('Meal-plans gen error:', err);
