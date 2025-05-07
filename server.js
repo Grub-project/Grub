@@ -20,7 +20,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ─── AI Prompt Generator ─────────────────────────────────────────────
+// ──────────── OpenAI generic generation route ────────────
 app.post('/api/generate', async (req, res) => {
   const { model, prompt } = req.body;
   try {
@@ -35,7 +35,7 @@ app.post('/api/generate', async (req, res) => {
   }
 });
 
-// ─── Generate Meal Plans with Ingredients ────────────────────────────
+// ─────────────── Meal Plan Generator ───────────────────
 app.post('/api/meal-plans', async (req, res) => {
   const { userId } = req.body;
 
@@ -45,33 +45,32 @@ app.post('/api/meal-plans', async (req, res) => {
       .select('*')
       .eq('user_id', userId)
       .single();
-
     if (pErr) throw pErr;
 
     const prompt = `
-You are a world-class meal-prep assistant.
+You are a professional meal prep chef.
 
-Based on these user preferences:
+Create TWO weekly meal plans based on these user preferences:
 ${JSON.stringify(prefs)}
 
-Generate exactly TWO distinct 7-day meal plans.
+Each plan should contain:
+- "label" (e.g. "Plan A", "Plan B")
+- 7 keys for days of the week: "Monday" through "Sunday"
+- Each day contains exactly 3 meals (breakfast, lunch, dinner)
+- Each meal must include:
+  - "name": short and clear (e.g., "Chicken Rice Bowl")
+  - "ingredients": array of 3–5 items like ["chicken breast", "brown rice", "spinach"]
+  - "calories": number
+  - "protein": number
 
-Each plan must contain these keys: "label", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday".
-Each day should be an array of exactly 3 meals. Each meal should include:
-- "name": short dish name
-- "ingredients": array of 3–5 simple ingredient names (like "chicken breast", "olive oil")
-- "calories": integer
-- "protein": integer
-
-Output strictly valid JSON:
+Return only valid JSON in this exact structure:
 {
   "plans": [
     {
       "label": "Plan A",
-      "Monday": [ { ... }, { ... }, { ... } ],
-      "Tuesday": [ { ... }, { ... }, { ... } ],
+      "Monday": [ { name, ingredients, calories, protein }, ... ],
       ...
-      "Sunday": [ { ... }, { ... }, { ... } ]
+      "Sunday": [ ... ]
     },
     {
       "label": "Plan B",
@@ -79,7 +78,7 @@ Output strictly valid JSON:
     }
   ]
 }
-No explanations. No comments. No text outside the JSON.
+Do not include explanations, comments, or text outside of the JSON.
     `.trim();
 
     const aiRes = await openai.chat.completions.create({
@@ -89,14 +88,10 @@ No explanations. No comments. No text outside the JSON.
     });
 
     const raw = aiRes.choices[0].message.content;
-    console.log("🔍 Raw AI response:\n", raw);
+    console.log("🔍 Raw OpenAI response:\n", raw);
 
     const match = raw.match(/\{[\s\S]*\}/);
-    if (!match) {
-      console.error('❌ No JSON found in AI response:', raw);
-      throw new Error('Invalid JSON from AI');
-    }
-
+    if (!match) throw new Error('Invalid JSON from AI');
     let jsonText = match[0];
     jsonText = jsonText.replace(/,\s*([\]}])/g, '$1');
 
@@ -104,40 +99,23 @@ No explanations. No comments. No text outside the JSON.
     try {
       ({ plans } = JSON.parse(jsonText));
     } catch (parseErr) {
-      console.error('❌ Failed to parse cleaned JSON:\n', jsonText);
+      console.error('❌ JSON Parse Error:\n', jsonText);
       throw new Error('Malformed JSON from AI');
     }
 
     res.json({ plans });
+
   } catch (err) {
     console.error('🚨 Meal-plans gen error:', err);
-    res.status(500).json({ error: err.message || 'Meal plan generation failed' });
-  }
-});
-
-// ─── Fetch Last Saved Plan ───────────────────────────────────────────
-app.get('/api/meal-plans/:userId', async (req, res) => {
-  const { userId } = req.params;
-  try {
-    const { data, error } = await supabase
-      .from('meal_plans')
-      .select('plan')
-      .eq('user_id', userId)
-      .order('saved_at', { ascending: false })
-      .limit(1)
-      .single();
-    if (error && error.code !== 'PGRST116') throw error;
-    res.json({ plan: data?.plan || null });
-  } catch (err) {
-    console.error('Fetch saved plan error:', err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// ─── Save a New Plan ─────────────────────────────────────────────────
+// ─────────────── Save Selected Plan ───────────────
 app.post('/api/meal-plans/:userId', async (req, res) => {
   const { userId } = req.params;
   const { plan } = req.body;
+
   try {
     const { error } = await supabase
       .from('meal_plans')
@@ -150,12 +128,30 @@ app.post('/api/meal-plans/:userId', async (req, res) => {
   }
 });
 
-// ─── Static Frontend ─────────────────────────────────────────────────
+// ─────────────── Load Last Plan ───────────────
+app.get('/api/meal-plans/:userId', async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const { data, error } = await supabase
+      .from('meal_plans')
+      .select('plan')
+      .eq('user_id', userId)
+      .order('saved_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error;
+    res.json({ plan: data?.plan || null });
+  } catch (err) {
+    console.error('Fetch saved plan error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─────────────── Static Frontend ───────────────
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ─── Start Server ────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 Listening on port ${PORT}`));
-
