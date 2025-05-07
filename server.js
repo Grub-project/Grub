@@ -7,7 +7,11 @@ import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
 
 dotenv.config();
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 const app = express();
@@ -23,9 +27,9 @@ app.use(cors({
   },
   credentials: true
 }));
-
 app.use(express.json());
 
+// ──────────── AI Ingredient/Generic Generation ────────────
 app.post('/api/generate', async (req, res) => {
   const { model, prompt } = req.body;
   try {
@@ -39,6 +43,7 @@ app.post('/api/generate', async (req, res) => {
   }
 });
 
+// ──────────── Generate Meal Plans from Preferences ────────────
 app.post('/api/meal-plans', async (req, res) => {
   const { userId } = req.body;
 
@@ -56,12 +61,26 @@ Create TWO weekly meal plans based on user preferences:
 ${JSON.stringify(prefs)}
 
 Each plan has:
-- label ("Plan A", "Plan B")
-- Monday–Sunday with 3 meals/day
-- Each meal: name, ingredients[], calories, protein
+- "label" (e.g., "Plan A")
+- keys for each day: Monday–Sunday
+- 3 meals per day
+- Each meal includes: name, ingredients[], calories, protein
 
 Return JSON only:
-{ "plans": [ { label, Monday: [...], ..., Sunday: [...] }, {...} ] }
+{
+  "plans": [
+    {
+      "label": "Plan A",
+      "Monday": [{ name, ingredients, calories, protein }, ...],
+      ...
+      "Sunday": [...]
+    },
+    {
+      "label": "Plan B",
+      ...
+    }
+  ]
+}
     `.trim();
 
     const aiRes = await openai.chat.completions.create({
@@ -78,10 +97,12 @@ Return JSON only:
     const { plans } = JSON.parse(jsonText);
     res.json({ plans });
   } catch (err) {
+    console.error('Meal-plan generation failed:', err);
     res.status(500).json({ error: err.message });
   }
 });
 
+// ──────────── Save Multiple Meal Plans ────────────
 app.post('/api/meal-plans/:userId', async (req, res) => {
   const { userId } = req.params;
   const { plans } = req.body;
@@ -100,6 +121,7 @@ app.post('/api/meal-plans/:userId', async (req, res) => {
   }
 });
 
+// ──────────── Get All Saved Meal Plans ────────────
 app.get('/api/meal-plans/:userId', async (req, res) => {
   const { userId } = req.params;
   try {
@@ -108,7 +130,7 @@ app.get('/api/meal-plans/:userId', async (req, res) => {
       .select('plan')
       .eq('user_id', userId)
       .order('saved_at', { ascending: false })
-      .limit(5);
+      .limit(10);
     if (error) throw error;
     res.json({ plans: data.map(d => d.plan) });
   } catch (err) {
@@ -116,10 +138,38 @@ app.get('/api/meal-plans/:userId', async (req, res) => {
   }
 });
 
+// ──────────── Delete a Plan by Index ────────────
+app.delete('/api/meal-plans/:userId/:index', async (req, res) => {
+  const { userId, index } = req.params;
+
+  try {
+    const { data, error: fetchError } = await supabase
+      .from('meal_plans')
+      .select('id')
+      .eq('user_id', userId)
+      .order('saved_at', { ascending: false });
+
+    if (fetchError) throw fetchError;
+    const target = data[Number(index)];
+    if (!target) return res.status(404).json({ error: 'Plan not found' });
+
+    const { error: deleteErr } = await supabase
+      .from('meal_plans')
+      .delete()
+      .eq('id', target.id);
+
+    if (deleteErr) throw deleteErr;
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Delete plan error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ──────────── Serve Static Frontend ────────────
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 app.use(express.static(path.join(__dirname, 'public')));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
-
