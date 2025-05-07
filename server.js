@@ -19,6 +19,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// ───────────── /api/generate for preferences ─────────────
 app.post('/api/generate', async (req, res) => {
   const { model, prompt } = req.body;
 
@@ -41,6 +42,7 @@ app.post('/api/generate', async (req, res) => {
   }
 });
 
+// ───────────── /api/meal-plans ─────────────
 app.post('/api/meal-plans', async (req, res) => {
   const { userId } = req.body;
 
@@ -50,6 +52,7 @@ app.post('/api/meal-plans', async (req, res) => {
       .select('*')
       .eq('user_id', userId)
       .single();
+
     if (pErr || !prefs) throw new Error('No preferences found.');
 
     const prompt = `
@@ -58,10 +61,11 @@ You are a professional meal prep chef.
 Create TWO weekly meal plans based on these preferences:
 ${JSON.stringify(prefs)}
 
-Each plan must contain:
-- "label": string
-- "Monday" through "Sunday"
-- Each day contains 3 meals:
+Each plan must include:
+- "label": string (e.g., "Plan A", "Plan B")
+- ALL 7 days: "Monday" through "Sunday" (do NOT skip any day)
+- Each day must include exactly 3 meals
+Each meal must contain:
   - "name": string
   - "ingredients": array of 3–5 strings
   - "calories": number
@@ -69,13 +73,14 @@ Each plan must contain:
   - "carbs": number
   - "fats": number
 
-Return **valid JSON only** using **double quotes** on all keys and strings. No explanations.
+Return ONLY valid JSON like:
 {
   "plans": [
     {
       "label": "Plan A",
-      "Monday": [ { "name": "Meal", "ingredients": [...], "calories": 350, "protein": 20, "carbs": 30, "fats": 10 }, ... ],
+      "Monday": [ { "name": "...", "ingredients": [...], "calories": 400, "protein": 30, "carbs": 40, "fats": 10 }, ... ],
       ...
+      "Sunday": [ ... ]
     },
     {
       "label": "Plan B",
@@ -83,6 +88,7 @@ Return **valid JSON only** using **double quotes** on all keys and strings. No e
     }
   ]
 }
+Do NOT include comments, markdown, or any explanation.
 `.trim();
 
     const aiRes = await openai.chat.completions.create({
@@ -91,14 +97,23 @@ Return **valid JSON only** using **double quotes** on all keys and strings. No e
     });
 
     const raw = aiRes.choices[0].message.content;
+    console.log('🧠 Raw GPT output:\n', raw);
+
     const match = raw.match(/\{[\s\S]*\}/);
     if (!match) throw new Error('Invalid JSON from AI');
 
     let jsonText = match[0]
-      .replace(/([{,])\s*([\w]+)\s*:/g, '$1"$2":')   
-      .replace(/,\s*([\]}])/g, '$1');                
+      .replace(/([{,])\s*([\w]+)\s*:/g, '$1"$2":') /
+      .replace(/,\s*([\]}])/g, '$1');              
 
-    const { plans } = JSON.parse(jsonText);
+    let plans;
+    try {
+      ({ plans } = JSON.parse(jsonText));
+    } catch (parseErr) {
+      console.error('❌ JSON Parse Error:\n', jsonText);
+      throw new Error('Malformed JSON from AI');
+    }
+
     res.json({ plans });
 
   } catch (err) {
@@ -107,6 +122,7 @@ Return **valid JSON only** using **double quotes** on all keys and strings. No e
   }
 });
 
+// Save plan(s)
 app.post('/api/meal-plans/:userId', async (req, res) => {
   const { userId } = req.params;
   const { plans } = req.body;
@@ -127,6 +143,7 @@ app.post('/api/meal-plans/:userId', async (req, res) => {
   }
 });
 
+// Load last 10 plans
 app.get('/api/meal-plans/:userId', async (req, res) => {
   const { userId } = req.params;
 
@@ -146,6 +163,7 @@ app.get('/api/meal-plans/:userId', async (req, res) => {
   }
 });
 
+// Delete specific plan
 app.delete('/api/meal-plans/:userId/:index', async (req, res) => {
   const { userId, index } = req.params;
 
@@ -173,9 +191,11 @@ app.delete('/api/meal-plans/:userId/:index', async (req, res) => {
   }
 });
 
+// Static Frontend
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 app.use(express.static(path.join(__dirname, 'public')));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
