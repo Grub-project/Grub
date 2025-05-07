@@ -49,36 +49,38 @@ app.post('/api/meal-plans', async (req, res) => {
     if (pErr) throw pErr;
 
     const prompt = `
-You are a world-class meal-prep chef.
+You are a world-class meal-prep assistant.
 
 Based on these user preferences:
 ${JSON.stringify(prefs)}
 
-Generate TWO distinct 7-day meal plans, each with 3 meals per day (Breakfast, Lunch, Dinner).
+Generate exactly TWO distinct 7-day meal plans.
 
-For each meal include:
-  - "name": e.g. "Grilled Lemon Herb Chicken Breast"
-  - "ingredients": array of real items like ["chicken breast", "rosemary", "lemon"]
-  - "calories": number
-  - "protein": number
+Each plan must contain these keys: "label", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday".
+Each day should be an array of exactly 3 meals. Each meal should include:
+- "name": short dish name
+- "ingredients": array of 3–5 simple ingredient names (like "chicken breast", "olive oil")
+- "calories": integer
+- "protein": integer
 
-Return ONLY valid JSON. No comments or text. Shape:
+Output strictly valid JSON:
 {
-  "plans":[
+  "plans": [
     {
-      "label":"Plan A",
-      "Monday":[{...},{...},{...}],
-      ...,
-      "Sunday":[{...},{...},{...}]
+      "label": "Plan A",
+      "Monday": [ { ... }, { ... }, { ... } ],
+      "Tuesday": [ { ... }, { ... }, { ... } ],
+      ...
+      "Sunday": [ { ... }, { ... }, { ... } ]
     },
     {
-      "label":"Plan B",
-      "Monday":[...],
-      ...,
-      "Sunday":[...]
+      "label": "Plan B",
+      ...
     }
   ]
-}`.trim();
+}
+No explanations. No comments. No text outside the JSON.
+    `.trim();
 
     const aiRes = await openai.chat.completions.create({
       model: 'gpt-4',
@@ -156,3 +158,4 @@ app.use(express.static(path.join(__dirname, 'public')));
 // ─── Start Server ────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 Listening on port ${PORT}`));
+
