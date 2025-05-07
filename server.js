@@ -19,7 +19,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ───────────── /api/generate for preferences ─────────────
+// ─────── /api/generate (for AI targets in preferences) ───────
 app.post('/api/generate', async (req, res) => {
   const { model, prompt } = req.body;
 
@@ -42,7 +42,7 @@ app.post('/api/generate', async (req, res) => {
   }
 });
 
-// ───────────── /api/meal-plans ─────────────
+// ─────── /api/meal-plans (Generate Plans) ───────
 app.post('/api/meal-plans', async (req, res) => {
   const { userId } = req.body;
 
@@ -89,7 +89,7 @@ Return ONLY valid JSON like:
   ]
 }
 Do NOT include comments, markdown, or any explanation.
-`.trim();
+    `.trim();
 
     const aiRes = await openai.chat.completions.create({
       model: 'gpt-4',
@@ -102,9 +102,10 @@ Do NOT include comments, markdown, or any explanation.
     const match = raw.match(/\{[\s\S]*\}/);
     if (!match) throw new Error('Invalid JSON from AI');
 
+    // ✅ SAFER JSON REPLACEMENTS (works in older Node)
     let jsonText = match[0]
-      .replace(/([{,])\s*([\w]+)\s*:/g, '$1"$2":') /
-      .replace(/,\s*([\]}])/g, '$1');              
+      .replace(/([{,])\s*([a-zA-Z0-9_]+)\s*:/g, '$1"$2":')  // quote unquoted keys
+      .replace(/,\s*([\]}])/g, '$1');                      // remove trailing commas
 
     let plans;
     try {
@@ -122,7 +123,7 @@ Do NOT include comments, markdown, or any explanation.
   }
 });
 
-// Save plan(s)
+// ─────── Save Plans ───────
 app.post('/api/meal-plans/:userId', async (req, res) => {
   const { userId } = req.params;
   const { plans } = req.body;
@@ -143,7 +144,7 @@ app.post('/api/meal-plans/:userId', async (req, res) => {
   }
 });
 
-// Load last 10 plans
+// ─────── Load Recent Plans ───────
 app.get('/api/meal-plans/:userId', async (req, res) => {
   const { userId } = req.params;
 
@@ -163,7 +164,7 @@ app.get('/api/meal-plans/:userId', async (req, res) => {
   }
 });
 
-// Delete specific plan
+// ─────── Delete Plan ───────
 app.delete('/api/meal-plans/:userId/:index', async (req, res) => {
   const { userId, index } = req.params;
 
@@ -191,11 +192,12 @@ app.delete('/api/meal-plans/:userId/:index', async (req, res) => {
   }
 });
 
-// Static Frontend
+// ─────── Static File Hosting ───────
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 app.use(express.static(path.join(__dirname, 'public')));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
 
