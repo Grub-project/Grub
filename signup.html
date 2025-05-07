@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sign Up - Grub</title>
+  <link rel="stylesheet" href="signup.css" />
+</head>
+<body>
+  <header>
+    <h1>Create Your Grub Account</h1>
+     <navhttps://cp1.freehostspace.com/#>
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="login.html">login in</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main class="form-container">
+    <form id="signup-form">
+      <label for="email">Email:</label>
+      <input type="email" id="email" required />
+
+      <label for="password">Password:</label>
+      <input type="password" id="password" required />
+
+      <label for="confirm-password">Confirm Password:</label>
+      <input type="password" id="confirm-password" required />
+
+      <button type="submit">Sign Up</button>
+    </form>
+    <p id="signup-message" class="notification"></p>
+  </main>
+
+  <script type="module" src="supabaseClient.js"></script>
+  <script type="module" src="signup.js"></script>
+</body>
+</html>

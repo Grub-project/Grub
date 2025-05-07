@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Grocery List – Grub</title>
+  <link rel="stylesheet" href="grocery.css" />
+</head>
+<body>
+  <header>
+    <h1>Your Grocery List</h1>
+    <nav>
+      <ul>
+        <li><a href="dashboard.html">Dashboard</a></li>
+        <li><a href="preferences.html">Preferences</a></li>
+        <li><a href="recipes.html">Meal Plan Ideas</a></li>
+        <li><a href="logout.html">Logout</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main>
+    <section class="controls">
+      <button id="generate-list">Generate List from Last Plan</button>
+      <button id="sort-list">Sort A-Z</button>
+      <button id="clear-list">Clear All</button>
+    </section>
+
+    <section id="grocery-msg" class="notification"></section>
+    <ul id="grocery-list"></ul>
+  </main>
+
+  <script type="module" src="supabaseClient.js"></script>
+  <script type="module" src="grocery.js"></script>
+</body>
+</html>

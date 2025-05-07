@@ -1,0 +1,117 @@
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f5fcf7;
+  color: #333;
+  margin: 0;
+}
+
+header {
+  background-color: #4caf50;
+  color: white;
+  padding: 1em;
+  text-align: center;
+}
+nav ul {
+  display: flex;
+  justify-content: center;
+  gap: 1.5em;
+  list-style: none;
+  margin: 0.5em 0;
+  padding: 0;
+}
+nav ul li a {
+  color: white;
+  text-decoration: none;
+  font-weight: bold;
+}
+nav ul li a.active {
+  text-decoration: none;
+}
+
+#search-section {
+  text-align: center;
+  padding: 2em;
+}
+#generate-plan {
+  padding: 0.8em 1.5em;
+  background-color: #43a047;
+  color: white;
+  font-weight: bold;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+#generate-plan:hover {
+  background-color: #388e3c;
+}
+
+#results-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.5em;
+  padding: 1em;
+}
+
+.plan-card {
+  position: relative;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+  padding: 1em;
+}
+.plan-card input[type="radio"] {
+  position: absolute;
+  top: 1em;
+  left: 1em;
+  transform: scale(1.2);
+}
+.plan-divider {
+  flex-basis: 100%;
+  border: none;
+  border-top: 2px solid #eee;
+  margin: 2em 0;
+}
+.day-block h3 {
+  margin: 0.5em 0 0.2em;
+  font-size: 1em;
+}
+.day-block ul {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1em;
+}
+.day-block li {
+  margin-left: 0.5em;
+}
+
+#select-section {
+  text-align: center;
+  margin: 2em 0;
+}
+#add-grocery {
+  padding: 0.8em 1.5em;
+  background-color: #ffa726;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+#add-grocery:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.notification {
+  opacity: 0;
+  transition: opacity 0.3s;
+  font-weight: bold;
+  margin-top: 1em;
+}
+.notification.show {
+  opacity: 1;
+}
+.notification.success {
+  color: #2e7d32;
+}
+.notification.error {
+  color: #c62828;
+}

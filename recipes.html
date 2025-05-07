@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meal Plan Ideas - Grub</title>
+  <link rel="stylesheet" href="recipes.css">
+</head>
+<body>
+  <header>
+    <h1>AI‑Powered Meal Plan Ideas</h1>
+    <nav>
+      <ul>
+        <li><a href="dashboard.html">Dashboard</a></li>
+        <li><a href="preferences.html">Preferences</a></li>
+        <li><a href="recipes.html" class="active">Meal Plan Ideas</a></li>
+        <li><a href="grocery.html">Grocery List</a></li>
+        <li><a href="logout.html">Logout</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main>
+    <section id="search-section">
+      <button id="generate-plan">Generate Weekly Meal Plans</button>
+    </section>
+
+    <section id="results-section">
+    </section>
+
+    <section id="select-section">
+      <button id="add-grocery" disabled>Add Selected Plan to Grocery List</button>
+      <p id="add-message" class="notification"></p>
+    </section>
+  </main>
+
+  <script type="module" src="supabaseClient.js"></script>
+  <script type="module" src="recipes.js"></script>
+</body>
+</html>
