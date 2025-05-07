@@ -12,11 +12,34 @@ const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
+
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+app.post('/api/generate', async (req, res) => {
+  const { model, prompt } = req.body;
+
+  if (!model || !prompt) {
+    return res.status(400).json({ error: 'Missing model or prompt' });
+  }
+
+  try {
+    const aiRes = await openai.chat.completions.create({
+      model,
+      messages: [{ role: 'user', content: prompt }]
+    });
+
+    const content = aiRes.choices[0].message.content;
+    res.json({ content });
+
+  } catch (err) {
+    console.error('AI generation error:', err);
+    res.status(500).json({ error: 'AI generation failed' });
+  }
+});
 
 app.post('/api/meal-plans', async (req, res) => {
   const { userId } = req.body;
@@ -72,8 +95,8 @@ Return **valid JSON only** using **double quotes** on all keys and strings. No e
     if (!match) throw new Error('Invalid JSON from AI');
 
     let jsonText = match[0]
-      .replace(/(\w+):/g, '"$1":')          
-      .replace(/,\s*([\]}])/g, '$1');      
+      .replace(/([{,])\s*([\w]+)\s*:/g, '$1"$2":')   
+      .replace(/,\s*([\]}])/g, '$1');                
 
     const { plans } = JSON.parse(jsonText);
     res.json({ plans });
@@ -84,7 +107,6 @@ Return **valid JSON only** using **double quotes** on all keys and strings. No e
   }
 });
 
-  
 app.post('/api/meal-plans/:userId', async (req, res) => {
   const { userId } = req.params;
   const { plans } = req.body;
